@@ -27,8 +27,8 @@ export const LEVELS = {
 };
 
 export const TOOL_COSTS = {
-  passwordManager: 12,
-  twoFactor: 16,
+  passwordManager: 8,
+  twoFactor: 10,
 };
 
 export const TIP_COST = 5;

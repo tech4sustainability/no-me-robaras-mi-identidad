@@ -6,12 +6,13 @@ import MessageWindow from './components/MessageWindow';
 import SecurityTipsPanel from './components/SecurityTipsPanel';
 import GameHUD from './components/GameHUD';
 import GameStats from './components/GameStats';
+import IntroModal from './components/IntroModal';
 import Timer from './components/Timer';
 import { APPS } from './data/apps';
 import { MESSAGES } from './data/messages';
 import { TIPS_LEVEL_1, TIPS_LEVEL_2 } from './data/tips';
 import { FEEDBACK_MESSAGES } from './data/feedbackMessages';
-import { LEVEL_INTROS } from './data/levelIntros';
+import { INITIAL_INTRO, LEVEL_INTROS } from './data/levelIntros';
 import {
   LEVELS,
   TOOL_COSTS,
@@ -71,6 +72,7 @@ export default function App() {
   const [stats, setStats] = useState(initialStats);
   const [gameStatus, setGameStatus] = useState('playing');
   const [paused, setPaused] = useState(true);
+  const [showInitialIntro, setShowInitialIntro] = useState(true);
   const [showLevelIntro, setShowLevelIntro] = useState(1);
   const [completedLevel, setCompletedLevel] = useState(null);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
@@ -785,6 +787,224 @@ export default function App() {
     spawnMessage,
   ]);
 
+  const debugOverlay = debugMode && (
+    <div className="debug-overlay">
+      <div>Nivel: {showInitialIntro ? 0 : level}</div>
+      <div>Estado: {gameStatus} {paused ? '(pausa)' : ''}</div>
+      <div>Puntos: {points}</div>
+      <div>Energía: {Math.round(energyPercent)}%</div>
+      <div>Consejos: {unlockedTips.length}/{allTips.length}</div>
+      <div>Mensajes activos: {activeMessages}</div>
+      <div>
+        App bajo ataque:{' '}
+        {activeAttackApp ? `${activeAttackApp[0]} (${activeAttackApp[1].attackTimer}s)` : 'ninguna'}
+      </div>
+      <div>Contraseñas cambiadas: {stats.passwordsChanged}</div>
+      <div>Mensajes correctos: {levelProgress.level2}</div>
+      <div>Mensajes eliminados: {stats.messagesDeleted}</div>
+      <div>Total de puntos ganados: {stats.totalPointsEarned}</div>
+      <div>Cuentas hackeadas: {stats.accountsHacked}</div>
+      <div>Debug panel: {showDebugPanel ? 'abierto' : 'cerrado'}</div>
+    </div>
+  );
+
+  const debugPanel = debugMode && showDebugPanel && (
+    <div className="debug-panel">
+      <div className="debug-section">
+        <div className="debug-title">Actuar sobre app</div>
+        <div className="debug-row">
+          <label>
+            App
+            <select
+              value={debugAppId}
+              onChange={(e) => setDebugAppId(e.target.value)}
+            >
+              {APPS.map((app) => (
+                <option key={app.id} value={app.id}>
+                  {app.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="debug-help">
+          Selecciona una app y luego usa las acciones debajo.
+        </div>
+        <div className="debug-subsection">
+          <div className="debug-subtitle">Estado</div>
+          <div className="debug-row">
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => setAppStatus(debugAppId, 'locked')}
+            >
+              Bloquear app
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => setAppStatus(debugAppId, 'safe')}
+            >
+              Desbloquear app
+            </button>
+          </div>
+        </div>
+        <div className="debug-subsection">
+          <div className="debug-subtitle">Mensajes</div>
+          <div className="debug-row">
+            <label>
+              Tipo
+              <select
+                value={debugMessageType}
+                onChange={(e) => setDebugMessageType(e.target.value)}
+              >
+                <option value="suspicious">Sospechoso</option>
+                <option value="safe">Seguro</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => forceMessage(debugAppId, debugMessageType)}
+            >
+              Forzar mensaje
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => clearAppMessage(debugAppId)}
+            >
+              Eliminar mensaje
+            </button>
+          </div>
+        </div>
+        <div className="debug-subsection">
+          <div className="debug-subtitle">Ataque</div>
+          <div className="debug-row">
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => forceAttack(debugAppId)}
+            >
+              Forzar ataque
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => clearAppAttack(debugAppId)}
+            >
+              Quitar ataque
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="debug-section">
+        <div className="debug-title">Navegación</div>
+        <div className="debug-row">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              jumpToLevel(1);
+              setShowInitialIntro(true);
+            }}
+          >
+            Ir a nivel 0
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setShowInitialIntro(false);
+              jumpToLevel(1);
+            }}
+          >
+            Ir a nivel 1
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setShowInitialIntro(false);
+              jumpToLevel(2);
+            }}
+          >
+            Ir a nivel 2
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setShowInitialIntro(false);
+              jumpToLevel(3);
+            }}
+          >
+            Ir a nivel 3
+          </button>
+        </div>
+      </div>
+
+      <div className="debug-section">
+        <div className="debug-title">Puntos</div>
+        <div className="debug-row">
+          <button type="button" className="btn ghost" onClick={() => applyPoints(10)}>
+            +10 puntos
+          </button>
+          <button type="button" className="btn ghost" onClick={() => applyPoints(100)}>
+            +100 puntos
+          </button>
+          <button type="button" className="btn ghost" onClick={() => applyPoints(-10)}>
+            -10 puntos
+          </button>
+          <button type="button" className="btn ghost" onClick={() => applyPoints(-100)}>
+            -100 puntos
+          </button>
+        </div>
+      </div>
+
+      <div className="debug-section">
+        <div className="debug-title">Consejos</div>
+        <div className="debug-row">
+          <button type="button" className="btn ghost" onClick={unlockNextTip}>
+            Desbloquear consejo
+          </button>
+        </div>
+      </div>
+
+      <div className="debug-section">
+        <div className="debug-title">Control</div>
+        <div className="debug-row">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              if (paused) return;
+              tickTimers();
+              moveHacker();
+              spawnMessage();
+            }}
+          >
+            Avanzar paso
+          </button>
+          <button type="button" className="btn ghost" onClick={resetCurrentLevel}>
+            Reiniciar nivel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (gameStatus === 'playing' && showInitialIntro && !showLevelComplete) {
+    return (
+      <div className="app intro-stage">
+        {debugOverlay}
+        {debugPanel}
+        <IntroModal intro={INITIAL_INTRO} onAction={() => setShowInitialIntro(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <GameHUD
@@ -795,182 +1015,8 @@ export default function App() {
         debugMode={debugMode}
       />
       <div className="game-area">
-        {debugMode && (
-          <div className="debug-overlay">
-            <div>Nivel: {level}</div>
-            <div>Estado: {gameStatus} {paused ? '(pausa)' : ''}</div>
-            <div>Puntos: {points}</div>
-            <div>Energía: {Math.round(energyPercent)}%</div>
-            <div>Consejos: {unlockedTips.length}/{allTips.length}</div>
-            <div>Mensajes activos: {activeMessages}</div>
-            <div>
-              App bajo ataque:{' '}
-              {activeAttackApp ? `${activeAttackApp[0]} (${activeAttackApp[1].attackTimer}s)` : 'ninguna'}
-            </div>
-            <div>Contraseñas cambiadas: {stats.passwordsChanged}</div>
-            <div>Mensajes correctos: {levelProgress.level2}</div>
-            <div>Mensajes eliminados: {stats.messagesDeleted}</div>
-            <div>Total de puntos ganados: {stats.totalPointsEarned}</div>
-            <div>Cuentas hackeadas: {stats.accountsHacked}</div>
-            <div>Debug panel: {showDebugPanel ? 'abierto' : 'cerrado'}</div>
-          </div>
-        )}
-
-        {debugMode && showDebugPanel && (
-          <div className="debug-panel">
-            <div className="debug-section">
-              <div className="debug-title">Actuar sobre app</div>
-              <div className="debug-row">
-                <label>
-                  App
-                  <select
-                    value={debugAppId}
-                    onChange={(e) => setDebugAppId(e.target.value)}
-                  >
-                    {APPS.map((app) => (
-                      <option key={app.id} value={app.id}>
-                        {app.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="debug-help">
-                Selecciona una app y luego usa las acciones debajo.
-              </div>
-              <div className="debug-subsection">
-                <div className="debug-subtitle">Estado</div>
-                <div className="debug-row">
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => setAppStatus(debugAppId, 'locked')}
-                  >
-                    Bloquear app
-                  </button>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => setAppStatus(debugAppId, 'safe')}
-                  >
-                    Desbloquear app
-                  </button>
-                </div>
-              </div>
-              <div className="debug-subsection">
-                <div className="debug-subtitle">Mensajes</div>
-                <div className="debug-row">
-                  <label>
-                    Tipo
-                    <select
-                      value={debugMessageType}
-                      onChange={(e) => setDebugMessageType(e.target.value)}
-                    >
-                      <option value="suspicious">Sospechoso</option>
-                      <option value="safe">Seguro</option>
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => forceMessage(debugAppId, debugMessageType)}
-                  >
-                    Forzar mensaje
-                  </button>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => clearAppMessage(debugAppId)}
-                  >
-                    Eliminar mensaje
-                  </button>
-                </div>
-              </div>
-              <div className="debug-subsection">
-                <div className="debug-subtitle">Ataque</div>
-                <div className="debug-row">
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => forceAttack(debugAppId)}
-                  >
-                    Forzar ataque
-                  </button>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => clearAppAttack(debugAppId)}
-                  >
-                    Quitar ataque
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="debug-section">
-              <div className="debug-title">Navegación</div>
-              <div className="debug-row">
-                <button type="button" className="btn ghost" onClick={() => jumpToLevel(1)}>
-                  Ir a nivel 1
-                </button>
-                <button type="button" className="btn ghost" onClick={() => jumpToLevel(2)}>
-                  Ir a nivel 2
-                </button>
-                <button type="button" className="btn ghost" onClick={() => jumpToLevel(3)}>
-                  Ir a nivel 3
-                </button>
-              </div>
-            </div>
-
-            <div className="debug-section">
-              <div className="debug-title">Puntos</div>
-              <div className="debug-row">
-                <button type="button" className="btn ghost" onClick={() => applyPoints(10)}>
-                  +10 puntos
-                </button>
-                <button type="button" className="btn ghost" onClick={() => applyPoints(100)}>
-                  +100 puntos
-                </button>
-                <button type="button" className="btn ghost" onClick={() => applyPoints(-10)}>
-                  -10 puntos
-                </button>
-                <button type="button" className="btn ghost" onClick={() => applyPoints(-100)}>
-                  -100 puntos
-                </button>
-              </div>
-            </div>
-
-            <div className="debug-section">
-              <div className="debug-title">Consejos</div>
-              <div className="debug-row">
-                <button type="button" className="btn ghost" onClick={unlockNextTip}>
-                  Desbloquear consejo
-                </button>
-              </div>
-            </div>
-
-            <div className="debug-section">
-              <div className="debug-title">Control</div>
-              <div className="debug-row">
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => {
-                    if (paused) return;
-                    tickTimers();
-                    moveHacker();
-                    spawnMessage();
-                  }}
-                >
-                  Avanzar paso
-                </button>
-                <button type="button" className="btn ghost" onClick={resetCurrentLevel}>
-                  Reiniciar nivel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {debugOverlay}
+        {debugPanel}
 
         <Desktop
           apps={APPS}
@@ -1254,29 +1300,16 @@ export default function App() {
         </div>
       )}
 
-      {paused && gameStatus === 'playing' && showLevelIntro != null && !showLevelComplete && (
-        <div className="end-screen">
-          <div className="end-card level-intro">
-            <h2>{LEVEL_INTROS[showLevelIntro].title}</h2>
-            <ul className="intro-list">
-              {LEVEL_INTROS[showLevelIntro].lines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                setPaused(false);
-                setShowLevelIntro(null);
-                setCompletedLevel(null);
-                setNextLevelPending(null);
-              }}
-            >
-              {LEVEL_INTROS[showLevelIntro].action}
-            </button>
-          </div>
-        </div>
+      {paused && gameStatus === 'playing' && showLevelIntro != null && !showLevelComplete && !showInitialIntro && (
+        <IntroModal
+          intro={LEVEL_INTROS[showLevelIntro]}
+          onAction={() => {
+            setPaused(false);
+            setShowLevelIntro(null);
+            setCompletedLevel(null);
+            setNextLevelPending(null);
+          }}
+        />
       )}
 
     </div>
